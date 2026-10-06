@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jae's Hub - Minesweeper</title><style>
+body{margin:0;background:#111;color:#fff;font-family:Arial;text-align:center}h1{margin:10px}.board{display:grid;grid-template-columns:repeat(10,34px);justify-content:center;margin:14px auto}.cell{width:34px;height:34px;box-sizing:border-box;border:2px outset #aaa;background:#777;color:#111;font-weight:bold;font-size:19px;line-height:30px;cursor:pointer}.open{background:#ccc;border:1px solid #999}.mine{background:#e44}.flag{background:#fc4}.msg{min-height:25px}button{padding:9px 16px;font-size:16px;border:0;border-radius:7px}
+</style></head><body><h1>💣 Minesweeper</h1><div>Mines: <b id="mineCount">15</b> | Time: <b id="time">0</b></div><div class="msg" id="msg"></div><div class="board" id="board"></div><button onclick="restart()">Restart</button>
+<script>
+const W=10,M=15,boardEl=document.getElementById("board");let a,started,done,flags,timer;
+function restart(){clearInterval(timer);a=[];started=false;done=false;flags=0;document.getElementById("time").textContent=0;document.getElementById("msg").textContent="";for(let y=0;y<W;y++){a[y]=[];for(let x=0;x<W;x++)a[y][x]={mine:false,open:false,flag:false,n:0}}render()}
+function neighbors(x,y){let r=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if((dx||dy)&&x+dx>=0&&x+dx<W&&y+dy>=0&&y+dy<W)r.push([x+dx,y+dy]);return r}
+function plant(sx,sy){let spots=[];for(let y=0;y<W;y++)for(let x=0;x<W;x++)if(Math.abs(x-sx)>1||Math.abs(y-sy)>1)spots.push([x,y]);spots.sort(()=>Math.random()-.5);spots.slice(0,M).forEach(([x,y])=>a[y][x].mine=true);for(let y=0;y<W;y++)for(let x=0;x<W;x++)a[y][x].n=neighbors(x,y).filter(([xx,yy])=>a[yy][xx].mine).length}
+function reveal(x,y){let q=a[y][x];if(done||q.flag||q.open)return;if(!started){plant(x,y);started=true;timer=setInterval(()=>document.getElementById("time").textContent=+document.getElementById("time").textContent+1,1000);q=a[y][x]}q.open=true;if(q.mine){done=true;clearInterval(timer);a.flat().forEach(v=>{if(v.mine)v.open=true});document.getElementById("msg").textContent="💥 Boom!";render();return}if(q.n===0)neighbors(x,y).forEach(([xx,yy])=>reveal(xx,yy));if(a.flat().filter(v=>!v.mine&&!v.open).length===0){done=true;clearInterval(timer);document.getElementById("msg").textContent="🎉 You win!"}render()}
+function flag(x,y){let q=a[y][x];if(done||q.open)return;q.flag=!q.flag;flags+=q.flag?1:-1;document.getElementById("mineCount").textContent=M-flags;render()}
+function render(){boardEl.innerHTML="";for(let y=0;y<W;y++)for(let x=0;x<W;x++){let q=a[y][x],d=document.createElement("div");d.className="cell "+(q.open?"open ":"")+(q.mine&&q.open?"mine ":"")+(q.flag?"flag":"");d.textContent=q.flag?"⚑":q.open?(q.mine?"💣":(q.n||"")):"";d.onclick=()=>reveal(x,y);d.oncontextmenu=e=>{e.preventDefault();flag(x,y)};boardEl.appendChild(d)}}
+restart();
+</script></body></html>

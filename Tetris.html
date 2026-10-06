@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jae's Hub - Tetris</title><style>
+body{margin:0;background:#111;color:#fff;font-family:Arial;text-align:center}h1{margin:8px}.wrap{display:flex;justify-content:center;gap:12px;align-items:flex-start}
+canvas{background:#050505;border:3px solid #fff;width:min(300px,82vw);height:auto}button{padding:9px 14px;margin:5px;font-size:16px}
+</style></head><body><h1>🟦 Tetris</h1><div>Score: <b id="score">0</b> | Lines: <b id="lines">0</b> | Level: <b id="level">1</b></div>
+<div class="wrap"><canvas id="c" width="300" height="600"></canvas></div><button onclick="restart()">Restart</button>
+<script>
+const c=document.getElementById("c"),ctx=c.getContext("2d"),N=30,COLS=10,ROWS=20;
+const shapes=[
+[[1,1,1,1]],[[1,0,0],[1,1,1]],[[0,0,1],[1,1,1]],[[1,1],[1,1]],
+[[0,1,1],[1,1,0]],[[0,1,0],[1,1,1]],[[1,1,0],[0,1,1]]];
+let board,piece,score,lines,level,over,drop,last;
+function restart(){board=Array.from({length:ROWS},()=>Array(COLS).fill(0));score=lines=0;level=1;over=false;newPiece();last=performance.now();requestAnimationFrame(loop)}
+function newPiece(){let s=shapes[Math.floor(Math.random()*shapes.length)];piece={m:s.map(r=>r.slice()),x:3,y:0};if(hit(piece))over=true}
+function hit(p,dx=0,dy=0,rot=p.m){for(let y=0;y<rot.length;y++)for(let x=0;x<rot[y].length;x++)if(rot[y][x]&&(p.y+y+dy>=ROWS||p.x+x+dx<0||p.x+x+dx>=COLS||(p.y+y+dy>=0&&board[p.y+y+dy][p.x+x+dx])))return true;return false}
+function rotate(){let m=piece.m.map((_,i)=>piece.m.map(r=>r[i]).reverse());if(!hit(piece,0,0,m))piece.m=m}
+function merge(){piece.m.forEach((r,y)=>r.forEach((v,x)=>{if(v&&piece.y+y>=0)board[piece.y+y][piece.x+x]=1}))}
+function clear(){for(let y=ROWS-1;y>=0;y--)if(board[y].every(Boolean)){board.splice(y,1);board.unshift(Array(COLS).fill(0));lines++;y++}}
+function lock(){merge();let before=lines;clear();let n=lines-before;score+=n?[100,300,500,800][n-1]*level:0;level=1+Math.floor(lines/10);newPiece()}
+function move(dx){if(!hit(piece,dx,0))piece.x+=dx}
+function hard(){while(!hit(piece,0,1))piece.y++;lock()}
+function step(){if(!hit(piece,0,1))piece.y++;else lock()}
+function loop(t){if(!over){if(t-last>Math.max(90,650-level*55)){step();last=t}draw();document.getElementById("score").textContent=score;document.getElementById("lines").textContent=lines;document.getElementById("level").textContent=level}requestAnimationFrame(loop)}
+function draw(){ctx.fillStyle="#050505";ctx.fillRect(0,0,300,600);ctx.strokeStyle="#161616";for(let i=0;i<=COLS;i++){ctx.beginPath();ctx.moveTo(i*N,0);ctx.lineTo(i*N,600);ctx.stroke()}for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(board[y][x])cell(x,y);piece.m.forEach((r,y)=>r.forEach((v,x)=>{if(v)cell(piece.x+x,piece.y+y)}));if(over){ctx.fillStyle="rgba(0,0,0,.7)";ctx.fillRect(0,0,300,600);ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font="bold 34px Arial";ctx.fillText("GAME OVER",150,290)}}
+function cell(x,y){if(y<0)return;ctx.fillStyle="#49f";ctx.fillRect(x*N+2,y*N+2,N-4,N-4)}
+document.addEventListener("keydown",e=>{if(over&&e.key.toLowerCase()==="r")restart();if(over)return;if(e.key==="ArrowLeft")move(-1);if(e.key==="ArrowRight")move(1);if(e.key==="ArrowDown"){step();last=performance.now()}if(e.key==="ArrowUp")rotate();if(e.code==="Space")hard()});restart();
+</script></body></html>

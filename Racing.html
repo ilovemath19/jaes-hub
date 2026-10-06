@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jae's Hub - Racing</title>
+<style>
+body{margin:0;background:#111;color:#fff;font-family:Arial,sans-serif;text-align:center;overflow:hidden}
+h1{margin:10px 0 4px}.info{margin-bottom:8px}.wrap{display:flex;justify-content:center}
+canvas{background:#333;border:3px solid #fff;max-width:94vw;max-height:78vh}
+button{font-size:18px;padding:10px 18px;margin:6px;border:0;border-radius:8px}
+.controls{margin-top:4px}
+</style></head><body>
+<h1>🏎️ Racing</h1><div class="info">Score: <b id="score">0</b> | Speed: <b id="speed">1</b></div>
+<div class="wrap"><canvas id="game" width="500" height="700"></canvas></div>
+<div class="controls"><button onclick="move(-1)">◀</button><button onclick="move(1)">▶</button><button onclick="restart()">Restart</button></div>
+<script>
+const c=document.getElementById("game"),x=c.getContext("2d"),scoreEl=document.getElementById("score"),speedEl=document.getElementById("speed");
+let player,enemies,score,speed,over,keys,last,spawnTimer;
+function restart(){player={lane:1,y:600,w:48,h:82};enemies=[];score=0;speed=4;over=false;last=0;spawnTimer=0;requestAnimationFrame(loop)}
+function move(d){if(!over)player.lane=Math.max(0,Math.min(2,player.lane+d))}
+function laneX(l){return 145+l*105}
+function car(px,py,w,h,color){x.fillStyle=color;x.fillRect(px-w/2,py,w,h);x.fillStyle="#bdefff";x.fillRect(px-w*.28,py+10,w*.56,18);x.fillStyle="#111";x.fillRect(px-w*.48,py+h-18,10,13);x.fillRect(px+w*.28,py+h-18,10,13)}
+function loop(t){if(over){draw();return}let dt=Math.min(32,t-last);last=t;score+=dt*.01;speed=4+score/35;spawnTimer-=dt;
+if(spawnTimer<=0){let l=Math.floor(Math.random()*3);enemies.push({lane:l,y:-90,w:48,h:82,color:["#e33","#39f","#fc3"][Math.floor(Math.random()*3)]});spawnTimer=650-Math.min(350,score*3)}
+enemies.forEach(e=>e.y+=speed*dt/16);enemies=enemies.filter(e=>e.y<760);
+for(const e of enemies){if(e.lane===player.lane&&Math.abs(e.y-player.y)<65){over=true}}
+draw();scoreEl.textContent=Math.floor(score);speedEl.textContent=Math.floor(speed);requestAnimationFrame(loop)}
+function draw(){x.fillStyle="#111";x.fillRect(0,0,c.width,c.height);x.fillStyle="#555";x.fillRect(100,0,300,700);
+x.fillStyle="#fff";for(let y=-40+(Date.now()/8%80);y<700;y+=80){x.fillRect(198,y,6,42);x.fillRect(296,y,6,42)}
+car(laneX(player.lane),player.y,player.w,player.h,"#4f6");
+for(const e of enemies)car(laneX(e.lane),e.y,e.w,e.h,e.color);
+if(over){x.fillStyle="rgba(0,0,0,.7)";x.fillRect(0,0,500,700);x.fillStyle="#fff";x.textAlign="center";x.font="bold 42px Arial";x.fillText("CRASH!",250,320);x.font="22px Arial";x.fillText("Press R or Restart",250,360)}}
+document.addEventListener("keydown",e=>{if(e.key==="ArrowLeft"||e.key.toLowerCase()==="a")move(-1);if(e.key==="ArrowRight"||e.key.toLowerCase()==="d")move(1);if(e.key.toLowerCase()==="r")restart()});
+restart();
+</script></body></html>
