@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jae's Hub - Flappy Bird</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;justify-content:center;align-items:center;background:#87ceeb;font-family:Arial,sans-serif;color:#17324d}
+.game{width:min(96vw,560px);padding:18px;text-align:center}
+h1{margin:0 0 6px;font-size:40px}
+.info{font-weight:bold;margin-bottom:10px}
+canvas{display:block;width:100%;max-width:520px;height:auto;aspect-ratio:4/3;margin:auto;border:4px solid #17324d;border-radius:12px;background:#70c5ce;touch-action:none}
+button{margin-top:14px;border:0;border-radius:8px;background:#2563eb;color:#fff;padding:12px 24px;font-size:16px;font-weight:bold;cursor:pointer}
+button:hover{background:#1d4ed8}
+.help{margin-top:9px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="game">
+<h1>🐦 Flappy Bird</h1>
+<div class="info">Score: <span id="score">0</span> &nbsp; Best: <span id="best">0</span></div>
+<canvas id="game" width="520" height="390" aria-label="Flappy Bird game"></canvas>
+<button id="restart" type="button">Start / Restart</button>
+<div class="help">Press Space, ↑, W, or click/tap to flap</div>
+</div>
+
+<script>
+"use strict";
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+const scoreEl=document.getElementById("score");
+const bestEl=document.getElementById("best");
+const restart=document.getElementById("restart");
+
+const W=canvas.width,H=canvas.height;
+const ground=35;
+let bird,pipes,score,best,playing,gameOver,started,lastTime,spawnTimer;
+
+try{best=Number(localStorage.getItem("jaesHubFlappyBest")||0)}catch(e){best=0}
+bestEl.textContent=best;
+
+function reset(){
+  bird={x:125,y:H/2,vy:0,r:15};
+  pipes=[];
+  score=0;
+  playing=false;
+  gameOver=false;
+  started=false;
+  spawnTimer=0;
+  scoreEl.textContent="0";
+  draw();
+}
+function start(){
+  if(gameOver)reset();
+  playing=true;
+  started=true;
+  bird.vy=-8;
+  lastTime=performance.now();
+  requestAnimationFrame(loop);
+}
+function flap(){
+  if(!playing){start();return}
+  bird.vy=-8;
+}
+function addPipe(){
+  const gap=125;
+  const minTop=45;
+  const maxTop=H-ground-gap-45;
+  const top=minTop+Math.random()*(maxTop-minTop);
+  pipes.push({x:W+20,top,gap,passed:false});
+}
+function update(dt){
+  bird.vy+=24*dt;
+  bird.y+=bird.vy*dt;
+
+  spawnTimer+=dt;
+  if(spawnTimer>=1.65){spawnTimer=0;addPipe()}
+
+  for(const p of pipes){
+    p.x-=145*dt;
+    if(!p.passed&&p.x+58<bird.x){
+      p.passed=true;
+      score++;
+      scoreEl.textContent=score;
+    }
+  }
+  pipes=pipes.filter(p=>p.x>-80);
+
+  if(bird.y-bird.r<0||bird.y+bird.r>H-ground){endGame();return}
+  for(const p of pipes){
+    const withinX=bird.x+bird.r>p.x&&bird.x-bird.r<p.x+58;
+    const hitTop=bird.y-bird.r<p.top;
+    const hitBottom=bird.y+bird.r>p.top+p.gap;
+    if(withinX&&(hitTop||hitBottom)){endGame();return}
+  }
+}
+function endGame(){
+  playing=false;
+  gameOver=true;
+  if(score>best){
+    best=score;
+    bestEl.textContent=best;
+    try{localStorage.setItem("jaesHubFlappyBest",String(best))}catch(e){}
+  }
+  draw();
+}
+function loop(now){
+  if(!playing)return;
+  const dt=Math.min((now-lastTime)/1000,0.032);
+  lastTime=now;
+  update(dt);
+  draw();
+  if(playing)requestAnimationFrame(loop);
+}
+function draw(){
+  const sky=ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,"#70c5ce");
+  sky.addColorStop(1,"#b9edf2");
+  ctx.fillStyle=sky;
+  ctx.fillRect(0,0,W,H);
+
+  // clouds
+  ctx.fillStyle="rgba(255,255,255,.65)";
+  [[75,75,32],[105,75,24],[390,105,34],[425,105,24]].forEach(c=>{
+    ctx.beginPath();ctx.arc(c[0],c[1],c[2],0,Math.PI*2);ctx.fill();
+  });
+
+  // pipes
+  for(const p of pipes){
+    ctx.fillStyle="#57b947";
+    ctx.fillRect(p.x,0,58,p.top);
+    ctx.fillRect(p.x,p.top+p.gap,58,H-ground-(p.top+p.gap));
+    ctx.fillStyle="#3c9634";
+    ctx.fillRect(p.x-5,p.top-12,68,12);
+    ctx.fillRect(p.x-5,p.top+p.gap,68,12);
+  }
+
+  // ground
+  ctx.fillStyle="#ded895";ctx.fillRect(0,H-ground,W,ground);
+  ctx.fillStyle="#b6a85a";ctx.fillRect(0,H-ground,W,5);
+
+  // bird
+  ctx.save();
+  ctx.translate(bird.x,bird.y);
+  ctx.rotate(Math.max(-0.45,Math.min(0.8,bird.vy/12)));
+  ctx.fillStyle="#ffd83d";
+  ctx.beginPath();ctx.arc(0,0,bird.r,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(7,-6,6,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#222";ctx.beginPath();ctx.arc(9,-6,2.5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#f28c28";
+  ctx.beginPath();ctx.moveTo(13,-1);ctx.lineTo(28,4);ctx.lineTo(13,8);ctx.closePath();ctx.fill();
+  ctx.fillStyle="#e9a62a";
+  ctx.beginPath();ctx.ellipse(-6,7,10,5,-.25,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+
+  if(!started&&!gameOver)overlay("Click / Space to Start","Avoid the pipes!");
+  if(gameOver)overlay("Game Over","Score: "+score+" • Press Start / Restart");
+}
+function overlay(title,sub){
+  ctx.fillStyle="rgba(0,0,0,.38)";
+  ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="#fff";ctx.textAlign="center";
+  ctx.font="bold 34px Arial";ctx.fillText(title,W/2,H/2-12);
+  ctx.font="18px Arial";ctx.fillText(sub,W/2,H/2+24);
+}
+function input(e){
+  if(e.type==="keydown"){
+    const k=e.key.toLowerCase();
+    if(![" ","arrowup","w"].includes(k))return;
+    e.preventDefault();
+  }
+  flap();
+}
+canvas.addEventListener("pointerdown",input);
+document.addEventListener("keydown",input);
+restart.addEventListener("click",()=>{reset();start()});
+reset();
+</script>
+</body>
+</html>
